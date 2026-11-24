@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0f4c4c">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>تسجيل الحضور</title>
+<style>
+  :root {
+    --bg: #f1f4f3; --surface: #ffffff; --ink: #16222a; --muted: #5d6b72;
+    --brand: #0f4c4c; --brand-ink: #ffffff; --line: #d5dcdb;
+    --ok: #1b7a4b; --ok-bg: #e3f4ea; --bad: #b3261e; --bad-bg: #fbe9e7;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0e1517; --surface: #172125; --ink: #e8eeee; --muted: #9aa8ad;
+      --brand: #2a9d8f; --brand-ink: #06201d; --line: #2a373c;
+      --ok: #5fd39a; --ok-bg: #12301f; --bad: #ff9d94; --bad-bg: #3a1714;
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    background: var(--bg); color: var(--ink);
+    font-family: system-ui, "Segoe UI", Tahoma, "Noto Sans Arabic", sans-serif;
+    font-size: 17px; line-height: 1.6;
+    padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
+  }
+  main { max-width: 460px; margin: 0 auto; padding: 20px 18px 32px; }
+  h1 { font-size: 1.5rem; margin: 8px 0 4px; }
+  p.lead { margin: 0 0 20px; color: var(--muted); }
+  .view { display: none; }
+  .view.active { display: block; }
+
+  label { display: block; font-weight: 600; margin: 16px 0 6px; }
+  input {
+    width: 100%; font: inherit; color: inherit; background: var(--surface);
+    border: 1.5px solid var(--line); border-radius: 12px; padding: 13px 14px;
+  }
+  input:focus-visible, button:focus-visible { outline: 3px solid var(--brand); outline-offset: 2px; }
+  .btn {
+    display: block; width: 100%; margin-top: 22px; padding: 14px 18px; border: 0; border-radius: 12px;
+    font: inherit; font-weight: 700; background: var(--brand); color: var(--brand-ink); cursor: pointer;
+  }
+  .btn.ghost { background: transparent; color: var(--ink); border: 1.5px solid var(--line); margin-top: 12px; }
+  .link { background: none; border: 0; padding: 0; font: inherit; color: var(--brand); text-decoration: underline; cursor: pointer; }
+  .err { color: var(--bad); margin-top: 10px; min-height: 1.5em; }
+
+  .who { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 14px; }
+  .who b { display: block; }
+  .who span { color: var(--muted); font-size: .9rem; }
+
+  .finder { position: relative; aspect-ratio: 1 / 1; width: 100%; background: #000; border-radius: 22px; overflow: hidden; }
+  .finder video { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .finder i { position: absolute; width: 46px; height: 46px; border: 5px solid #fff; opacity: .95; }
+  .finder i:nth-of-type(1) { top: 16px; right: 16px; border-left: 0; border-bottom: 0; border-top-right-radius: 14px; }
+  .finder i:nth-of-type(2) { top: 16px; left: 16px; border-right: 0; border-bottom: 0; border-top-left-radius: 14px; }
+  .finder i:nth-of-type(3) { bottom: 16px; right: 16px; border-left: 0; border-top: 0; border-bottom-right-radius: 14px; }
+  .finder i:nth-of-type(4) { bottom: 16px; left: 16px; border-right: 0; border-top: 0; border-bottom-left-radius: 14px; }
+  .hint { text-align: center; color: var(--muted); margin-top: 14px; }
+
+  .result { text-align: center; padding: 28px 18px; border-radius: 22px; background: var(--surface); border: 1.5px solid var(--line); }
+  .result .mark { font-size: 3.2rem; line-height: 1; }
+  .result h2 { margin: 12px 0 6px; font-size: 1.4rem; }
+  .result p { margin: 4px 0; }
+  .result.ok { background: var(--ok-bg); border-color: var(--ok); }
+  .result.ok .mark, .result.ok h2 { color: var(--ok); }
+  .result.bad { background: var(--bad-bg); border-color: var(--bad); }
+  .result.bad .mark, .result.bad h2 { color: var(--bad); }
+  .spin { width: 42px; height: 42px; margin: 0 auto 10px; border: 5px solid var(--line); border-top-color: var(--brand); border-radius: 50%; animation: s 0.9s linear infinite; }
+  @keyframes s { to { transform: rotate(360deg); } }
+  @media (prefers-reduced-motion: reduce) { .spin { animation-duration: 3s; } }
+</style>
+</head>
+<body>
+<main>
+
+  <!-- 1) تسجيل البيانات لمرة واحدة -->
+  <section id="v-register" class="view">
+    <h1>أهلاً بك</h1>
+    <p class="lead">اكتب بياناتك مرة واحدة فقط، وبعدها يكفي أن تفتح التطبيق وتمسح الكود.</p>
+    <label for="name">الاسم الكامل</label>
+    <input id="name" autocomplete="name" placeholder="مثال: أحمد محمد علي">
+    <label for="sid">الرقم الجامعي</label>
+    <input id="sid" inputmode="numeric" autocomplete="off" placeholder="مثال: 20231045">
+    <div id="regErr" class="err" role="alert"></div>
+    <button class="btn" id="saveBtn">حفظ والبدء</button>
+  </section>
+
+  <!-- 2) الكاميرا -->
+  <section id="v-scan" class="view">
+    <div class="who">
+      <div><b id="whoName"></b><span id="whoId"></span></div>
+      <button class="link" id="editBtn">تعديل بياناتي</button>
+    </div>
+    <div class="finder">
+      <video id="video" playsinline muted></video>
+      <i></i><i></i><i></i><i></i>
+    </div>
+    <p class="hint" id="scanHint">جارٍ فتح الكاميرا…</p>
+    <canvas id="canvas" hidden></canvas>
+  </section>
+
+  <!-- 3) النتيجة -->
+  <section id="v-result" class="view">
+    <div class="result" id="resultBox">
+      <div class="mark" id="resMark"></div>
+      <h2 id="resTitle"></h2>
+      <p id="resMsg"></p>
+      <p id="resMeta" style="color:var(--muted)"></p>
+    </div>
+    <button class="btn" id="againBtn" hidden>امسح الكود مرة أخرى</button>
+  </section>
+
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js"></script>
+<script src="config.js"></script>
+<script>
+(function () {
+  const $ = (id) => document.getElementById(id);
+  const KEY_STUDENT = 'att_student', KEY_DEVICE = 'att_device';
+  const video = $('video'), canvas = $('canvas'), ctx = canvas.getContext('2d', { willReadFrequently: true });
+  let stream = null, scanning = false;
+
+  function store(k, v) { try { if (v === undefined) return localStorage.getItem(k); localStorage.setItem(k, v); } catch (e) { return null; } }
+  function student() { try { return JSON.parse(store(KEY_STUDENT)); } catch (e) { return null; } }
+  function deviceId() {
+    let d = store(KEY_DEVICE);
+    if (!d) {
+      d = (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : (Date.now().toString(36) + Math.random().toString(36).slice(2));
+      store(KEY_DEVICE, d);
+    }
+    return d;
+  }
+  function show(name) {
+    document.querySelectorAll('.view').forEach((v) => v.classList.remove('active'));
+    $('v-' + name).classList.add('active');
+  }
+
+  /* ---------- التسجيل ---------- */
+  function openRegister() {
+    stopScan();
+    const s = student();
+    $('name').value = s ? s.name : '';
+    $('sid').value = s ? s.id : '';
+    $('regErr').textContent = '';
+    show('register');
+  }
+  $('saveBtn').onclick = function () {
+    const name = $('name').value.trim().replace(/\s+/g, ' ');
+    const id = $('sid').value.trim().replace(/\s+/g, '');
+    if (name.length < 3) { $('regErr').textContent = 'اكتب اسمك الكامل.'; return; }
+    if (id.length < 3) { $('regErr').textContent = 'اكتب الرقم الجامعي.'; return; }
+    store(KEY_STUDENT, JSON.stringify({ name: name, id: id }));
+    startScan();
+  };
+  $('editBtn').onclick = openRegister;
+
+  /* ---------- الكاميرا ---------- */
+  async function startScan() {
+    const s = student();
+    if (!s) return openRegister();
+    $('whoName').textContent = s.name;
+    $('whoId').textContent = 'الرقم الجامعي: ' + s.id;
+    show('scan');
+    $('scanHint').textContent = 'جارٍ فتح الكاميرا…';
+
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      return showResult('bad', '⚠', 'الكاميرا غير متاحة', 'افتح الرابط من متصفح حديث وباتصال آمن (https).', true);
+    }
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 } }, audio: false });
+    } catch (e) {
+      return showResult('bad', '⚠', 'لم يتم السماح بالكاميرا', 'اسمح للمتصفح باستخدام الكاميرا من إعدادات الموقع ثم أعد المحاولة.', true);
+    }
+    video.srcObject = stream;
+    try { await video.play(); } catch (e) {}
+    try {
+      const tr = stream.getVideoTracks()[0];
+      const caps = tr.getCapabilities ? tr.getCapabilities() : {};
+      if (caps.focusMode && caps.focusMode.indexOf('continuous') > -1) await tr.applyConstraints({ advanced: [{ focusMode: 'continuous' }] });
+    } catch (e) {}
+    scanning = true;
+    $('scanHint').textContent = 'قرّب الهاتف من الشاشة وثبّته حتى يظهر الكود كاملاً داخل الإطار';
+    tick();
+  }
+  function stopScan() {
+    scanning = false;
+    if (stream) { stream.getTracks().forEach((t) => t.stop()); stream = null; }
+    video.srcObject = null;
+  }
+  let busy = false, lastRun = 0, detector = null;
+  try { if ('BarcodeDetector' in window) detector = new BarcodeDetector({ formats: ['qr_code'] }); } catch (e) { detector = null; }
+
+  async function tick() {
+    if (!scanning) return;
+    const now = performance.now();
+    if (!busy && now - lastRun > 120 && video.readyState === video.HAVE_ENOUGH_DATA && video.videoWidth) {
+      busy = true; lastRun = now;
+      let data = null;
+      try {
+        if (detector) {
+          const r = await detector.detect(video);
+          if (r && r.length) data = r[0].rawValue;
+        }
+        if (!data) {
+          const w = video.videoWidth, h = video.videoHeight;
+          const k = Math.min(1, 1280 / Math.max(w, h));
+          canvas.width = Math.round(w * k); canvas.height = Math.round(h * k);
+          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+          const img = ctx.getImageData(0, 0, canvas.width, canvas.height);
+          const code = jsQR(img.data, img.width, img.height, { inversionAttempts: 'attemptBoth' });
+          if (code && code.data) data = code.data;
+        }
+      } catch (e) {}
+      busy = false;
+      if (!scanning) return;
+      if (data) {
+        if (data.split('|').length === 3) return onCode(data);
+        $('scanHint').textContent = 'هذا ليس كود الحضور. وجّه الكاميرا نحو الكود المعروض على الشاشة';
+      }
+    }
+    requestAnimationFrame(tick);
+  }
+
+  /* ---------- الإرسال ---------- */
+  async function onCode(token) {
+    stopScan();
+    if (navigator.vibrate) navigator.vibrate(60);
+    const s = student();
+    show('result');
+    $('againBtn').hidden = true;
+    $('resultBox').className = 'result';
+    $('resMark').innerHTML = '<div class="spin"></div>';
+    $('resTitle').textContent = 'جارٍ تسجيل الحضور…';
+    $('resMsg').textContent = ''; $('resMeta').textContent = '';
+
+    if (typeof SCRIPT_URL === 'undefined' || SCRIPT_URL.indexOf('PASTE_') === 0) {
+      return showResult('bad', '⚠', 'التطبيق غير مضبوط', 'رابط السيرفر غير موجود في ملف config.js.', true);
+    }
+    try {
+      const qs = new URLSearchParams({ action: 'checkin', token: token, id: s.id, name: s.name, device: deviceId() });
+      const res = await fetch(SCRIPT_URL + '?' + qs.toString());
+      const data = await res.json();
+      if (data.ok && data.already) {
+        showResult('ok', '✓', 'تم تسجيلك من قبل', 'حضورك في هذه المحاضرة مسجّل بالفعل.', false, data.lecture);
+      } else if (data.ok) {
+        if (navigator.vibrate) navigator.vibrate([80, 40, 80]);
+        showResult('ok', '✓', 'تم تسجيل حضورك', data.name, false, (data.lecture || '') + (data.time ? ' — ' + data.time : ''));
+      } else {
+        showResult('bad', '✕', 'لم يتم التسجيل', data.error || 'حدث خطأ غير معروف.', true);
+      }
+    } catch (e) {
+      showResult('bad', '✕', 'تعذّر الاتصال', 'تأكد من اتصال الإنترنت ثم امسح الكود مرة أخرى.', true);
+    }
+  }
+
+  function showResult(kind, mark, title, msg, retry, meta) {
+    show('result');
+    $('resultBox').className = 'result ' + kind;
+    $('resMark').textContent = mark;
+    $('resTitle').textContent = title;
+    $('resMsg').textContent = msg || '';
+    $('resMeta').textContent = meta || '';
+    $('againBtn').hidden = !retry;
+  }
+  $('againBtn').onclick = startScan;
+
+  /* ---------- البداية ---------- */
+  if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(function () {});
+  if (student()) startScan(); else openRegister();
+})();
+</script>
+</body>
+</html>
